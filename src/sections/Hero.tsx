@@ -44,8 +44,8 @@ export default function Hero() {
   const resolve = (u: string) => (u === '@resume' ? profile?.resume_url || '' : u)
 
   return (
-    <section id="top" className="relative z-[1] pt-[4.75rem] sm:pt-24 md:pt-28 pb-8 lg:pt-[5rem] lg:pb-4 lg:h-[100svh] lg:min-h-[30rem] lg:flex lg:flex-col lg:justify-center">
-      <div className="container-x lg:w-full">
+    <section id="top" className="relative z-[1] pt-[4.75rem] sm:pt-24 md:pt-28 pb-5 sm:pb-8 min-h-[100svh] flex flex-col lg:pt-[5rem] lg:pb-4 lg:h-[100svh] lg:min-h-[30rem] lg:justify-center">
+      <div className="container-x w-full flex-1 flex flex-col lg:flex-none">
         {/* meta strip */}
         {(h.show_status || (h.show_clock && clock)) && (
           <div className="fade-up flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-b border-line pb-2 mb-4 sm:pb-3 sm:mb-8 lg:pb-2 lg:mb-4" style={{ '--d': '0ms' } as React.CSSProperties}>
@@ -62,8 +62,8 @@ export default function Hero() {
           </div>
         )}
 
-        <div className="grid lg:grid-cols-12 gap-5 sm:gap-8 lg:gap-10 items-center">
-          <div className={split && h.show_specs ? 'lg:col-span-8' : 'lg:col-span-12'}>
+        <div className="flex-1 flex flex-col gap-3 sm:gap-6 lg:grid lg:grid-cols-12 lg:gap-10 lg:items-center">
+          <div className={`order-2 lg:order-none ${split && h.show_specs ? 'lg:col-span-8' : 'lg:col-span-12'}`}>
             <div className="flex items-center gap-4 mb-3 sm:mb-6 lg:mb-4 fade-up" style={{ '--d': '80ms' } as React.CSSProperties}>
               {!split && h.show_avatar && (
                 <span className="w-16 h-16 shrink-0 border border-line overflow-hidden marks">
@@ -116,10 +116,10 @@ export default function Hero() {
 
           {/* spec sheet: on phones a compact photo + facts card, on desktop a tall card whose photo fills the free height */}
           {split && h.show_specs && (
-            <aside className="lg:col-span-4 fade-up lg:justify-self-end w-full lg:w-[min(21rem,100%)]" style={{ '--d': '420ms' } as React.CSSProperties}>
-              <div className="border border-line flex lg:flex-col lg:h-[min(calc(100svh-11rem),34rem)]" style={{ background: 'var(--bg)' }}>
+            <aside className="contents lg:block lg:col-span-4 fade-up lg:justify-self-end lg:w-[min(21rem,100%)]" style={{ '--d': '420ms' } as React.CSSProperties}>
+              <div className="contents lg:flex lg:flex-col lg:border lg:border-line lg:h-[min(calc(100svh-11rem),34rem)]" style={{ background: 'var(--bg)' }}>
                 {h.show_avatar && (
-                  <div className="relative w-[8.5rem] sm:w-48 shrink-0 min-h-[9rem] lg:w-auto lg:min-h-0 lg:flex-1 border-r lg:border-r-0 lg:border-b border-line overflow-hidden bg-soft">
+                  <div className="order-1 relative w-full flex-1 min-h-[13rem] sm:min-h-[20rem] lg:order-none lg:min-h-0 border border-line lg:border-0 lg:border-b overflow-hidden bg-soft">
                     {profile?.avatar_url
                       ? <img src={profile.avatar_url} alt={name} className="absolute inset-0 w-full h-full object-cover" style={{ objectPosition: 'center 20%' }} />
                       : <div className="placeholder-x absolute inset-0 flex items-center justify-center font-display font-semibold text-4xl lg:text-6xl text-faint">{initials}</div>}
@@ -127,9 +127,9 @@ export default function Hero() {
                   </div>
                 )}
                 {h.specs.length > 0 && (
-                  <dl className="flex-1 min-w-0 lg:flex-none px-3 sm:px-4 py-1 self-center lg:self-auto">
+                  <dl className="order-3 min-w-0 border border-line lg:border-0 lg:order-none px-3 sm:px-4 py-0.5" style={{ background: 'var(--bg)' }}>
                     {h.specs.map(s => (
-                      <div key={s.id} className="flex items-baseline justify-between gap-3 py-1.5 lg:py-2 border-b border-dashed border-line last:border-0">
+                      <div key={s.id} className="flex items-baseline justify-between gap-3 py-1 sm:py-1.5 lg:py-2 border-b border-dashed border-line last:border-0">
                         <dt className="label !text-[0.62rem] sm:!text-[0.68rem] shrink-0">{s.label}</dt>
                         <dd className="text-[0.78rem] sm:text-[0.85rem] leading-snug text-ink text-right">{s.value}</dd>
                       </div>
