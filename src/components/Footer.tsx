@@ -1,3 +1,4 @@
+import UnreadDot from './UnreadDot'
 import { useData } from '../context/DataContext'
 import { ActionLink, pad } from './ui'
 import Ribbon from './Ribbon'
@@ -53,7 +54,7 @@ export default function Footer() {
         <div className="border-t border-line">
           <div className="container-x h-14 flex items-center justify-between gap-4">
             <p className="mono text-faint">© {new Date().getFullYear()} {name}</p>
-            <Link to="/admin/login" className="mono flex items-center gap-1.5 text-faint hover:text-[color:var(--accent)] transition-colors ml-auto mr-5"><Lock size={12} />Admin login</Link>
+            <Link to="/admin/login" className="mono relative flex items-center gap-1.5 text-faint hover:text-[color:var(--accent)] transition-colors ml-auto mr-5"><Lock size={12} />Admin login<UnreadDot className="!-top-1 !-right-3" /></Link>
             <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="mono flex items-center gap-2 text-muted hover:text-[color:var(--accent)] transition-colors">
               Top <ArrowUp size={13} />
             </button>

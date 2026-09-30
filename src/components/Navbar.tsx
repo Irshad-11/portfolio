@@ -1,3 +1,4 @@
+import UnreadDot from './UnreadDot'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { Lock, Menu, X } from 'lucide-react'
@@ -78,12 +79,13 @@ export default function Navbar() {
 
             <div className="flex items-center gap-2 shrink-0">
               <ModeToggle />
-              <Link to="/admin/login" className="btn btn-outline !h-10 !px-3 hidden sm:inline-flex" aria-label="Admin login" title="Admin login"><Lock size={14} /><span className="hidden xl:inline">Admin</span></Link>
+              <Link to="/admin/login" className="btn btn-outline !h-10 !px-3 hidden sm:inline-flex relative" aria-label="Admin login" title="Admin login"><Lock size={14} /><span className="hidden xl:inline">Admin</span><UnreadDot /></Link>
               {site.nav_cta_enabled && site.nav_cta_label && (
                 <ActionLink href={site.nav_cta_url} className="btn btn-solid !h-10 !px-4 hidden sm:inline-flex">{site.nav_cta_label}</ActionLink>
               )}
-              <button className="icon-btn lg:hidden" onClick={() => setOpen(o => !o)} aria-label={open ? 'Close menu' : 'Open menu'} aria-expanded={open}>
+              <button className="icon-btn lg:hidden relative" onClick={() => setOpen(o => !o)} aria-label={open ? 'Close menu' : 'Open menu'} aria-expanded={open}>
                 {open ? <X size={18} /> : <Menu size={18} />}
+                {!open && <UnreadDot className="!top-0.5 !right-0.5 sm:hidden" />}
               </button>
             </div>
           </div>
@@ -108,7 +110,7 @@ export default function Navbar() {
             {site.nav_cta_enabled && site.nav_cta_label && (
               <ActionLink href={site.nav_cta_url} onClick={() => setOpen(false)} className="btn btn-solid w-full mt-5">{site.nav_cta_label}</ActionLink>
             )}
-            <Link to="/admin/login" onClick={() => setOpen(false)} className="btn btn-outline w-full mt-3"><Lock size={15} />Admin login</Link>
+            <Link to="/admin/login" onClick={() => setOpen(false)} className="btn btn-outline w-full mt-3 relative"><Lock size={15} />Admin login<UnreadDot className="!top-1.5 !right-2" /></Link>
             {ctaLinks.length > 0 && (
               <div className="flex gap-2 mt-6">
                 {ctaLinks.map(l => (

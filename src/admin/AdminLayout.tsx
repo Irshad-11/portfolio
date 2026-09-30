@@ -62,7 +62,7 @@ export default function AdminLayout() {
                   className={({ isActive }) => `flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${isActive ? 'accent-bg font-medium' : 'text-[color:var(--text-muted)] hover:text-[color:var(--text)] hover:bg-white/5'}`}>
                   <Icon size={16} className="flex-shrink-0" />{label}
                   {'badge' in rest && unreadMessages > 0 && (
-                    <span className="ml-auto bg-[color:var(--accent)] text-[color:var(--accent-ink)] text-[10px] font-semibold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">{unreadMessages > 9 ? '9+' : unreadMessages}</span>
+                    <span className="ml-auto bg-red-500 text-white text-[10px] font-semibold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">{unreadMessages > 9 ? '9+' : unreadMessages}</span>
                   )}
                 </NavLink>
               ))}
