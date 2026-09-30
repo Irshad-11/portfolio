@@ -1,143 +1,117 @@
-import { useState, useEffect, useRef } from 'react'
-import { Send, CheckCircle, Github, Linkedin, Twitter, Mail } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Send, Check, Copy } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { supabase } from '../lib/supabase'
 import { trackMessageDraft } from '../lib/analytics'
 import { useData } from '../context/DataContext'
-import { useScrollReveal } from '../hooks/useScrollReveal'
-import SectionHeading from '../components/SectionHeading'
+import { SectionShell, ActionLink } from '../components/ui'
+import { DynamicIcon } from '../lib/icons'
 
 export default function Contact() {
-  const { profile } = useData()
-  const ref = useScrollReveal('contact')
+  const { profile, config, sections } = useData()
+  const sec = sections.find(s => s.key === 'contact')
   const [form, setForm] = useState({ name: '', email: '', message: '' })
+  const [trap, setTrap] = useState('')
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState(false)
-  const hasDraftRef = useRef(false)
+  const [copied, setCopied] = useState(false)
+  const draft = useRef(false)
 
-  // Track draft on page leave
   useEffect(() => {
-    const handler = () => {
-      if (hasDraftRef.current && !sent) {
-        trackMessageDraft({
-          nameProvided: form.name.length > 0,
-          emailProvided: form.email.length > 0,
-          messageLength: form.message.length,
-        })
-      }
+    const onLeave = () => {
+      if (draft.current && !sent) trackMessageDraft({ nameProvided: !!form.name, emailProvided: !!form.email, messageLength: form.message.length })
     }
-    window.addEventListener('beforeunload', handler)
-    return () => window.removeEventListener('beforeunload', handler)
+    window.addEventListener('beforeunload', onLeave)
+    return () => window.removeEventListener('beforeunload', onLeave)
   }, [form, sent])
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target
-    setForm(f => ({ ...f, [name]: value }))
-    if (value.length > 0) hasDraftRef.current = true
+  if (!sec) return null
+  const links = config.links.filter(l => l.contact)
+  const h = config.hero
+
+  const change = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setForm(f => ({ ...f, [e.target.name]: e.target.value }))
+    if (e.target.value) draft.current = true
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!form.name || !form.email || !form.message) return toast.error('Please fill all fields')
+    if (trap) return
+    if (!form.name.trim() || !form.email.trim() || !form.message.trim()) return toast.error('Please fill in all fields')
+    if (!/^\S+@\S+\.\S+$/.test(form.email)) return toast.error('That email address looks off')
     setSending(true)
     const { error } = await supabase.from('contact_messages').insert([form])
-    if (error) {
-      toast.error('Something went wrong. Try again.')
-    } else {
-      setSent(true)
-      hasDraftRef.current = false
-      toast.success('Message sent!')
-    }
     setSending(false)
+    if (error) return toast.error('Something went wrong. Please try again.')
+    setSent(true); draft.current = false
+    toast.success('Message sent')
+  }
+
+  const copy = async () => {
+    if (!profile?.email) return
+    try { await navigator.clipboard.writeText(profile.email); setCopied(true); setTimeout(() => setCopied(false), 1800) } catch { /* ignore */ }
   }
 
   return (
-    <section id="contact" ref={ref as React.RefObject<HTMLElement>} className="section-base">
-      <div className="max-w-5xl mx-auto">
-        <div className="reveal">
-          <SectionHeading title="Get In Touch" subtitle="Have a project in mind? Let's build something great together." />
+    <SectionShell id="contact" index={sec.index} title={sec.title} subtitle={sec.subtitle}>
+      <div className="grid lg:grid-cols-12 gap-12 lg:gap-16">
+        <div className="reveal-left lg:col-span-5 space-y-10">
+          {h.show_status && (
+            <p className={`mono !normal-case inline-flex items-center gap-3 tone-${h.status_tone}`}>
+              <span className="pill-dot" /><span className="text-ink">{h.status_text}</span>
+            </p>
+          )}
+          {profile?.email && (
+            <div>
+              <p className="label mb-3">Email</p>
+              <div className="flex items-center gap-3 flex-wrap">
+                <a href={`mailto:${profile.email}`} className="font-display font-semibold text-ink text-lg sm:text-2xl u-link break-all">{profile.email}</a>
+                <button onClick={copy} className="icon-btn !w-9 !h-9" aria-label="Copy email">{copied ? <Check size={15} /> : <Copy size={15} />}</button>
+              </div>
+            </div>
+          )}
+          {profile?.phone && (
+            <div><p className="label mb-3">Phone</p><a href={`tel:${profile.phone}`} className="text-ink text-lg u-link">{profile.phone}</a></div>
+          )}
+          {links.length > 0 && (
+            <div>
+              <p className="label mb-3">Find me on</p>
+              <ul className="ledger">
+                {links.map(l => (
+                  <li key={l.id}>
+                    <ActionLink href={l.url} className="group flex items-center gap-4 py-3.5 text-muted hover:text-ink transition-colors">
+                      <span className="text-[color:var(--accent)]"><DynamicIcon name={l.icon} size={17} /></span>
+                      <span className="flex-1">{l.label}</span>
+                      <span className="mono text-faint group-hover:text-[color:var(--accent)] transition-colors">↗</span>
+                    </ActionLink>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
 
-        <div className="grid md:grid-cols-5 gap-10">
-          {/* Left info */}
-          <div className="md:col-span-2 space-y-6 reveal-left">
-            <p className="text-[color:var(--text-muted)] text-sm leading-relaxed">
-              I'm always open to discussing new projects, creative ideas, or opportunities to be part of your vision.
-            </p>
-
-            {profile?.email && (
-              <a href={`mailto:${profile.email}`}
-                 className="flex items-center gap-3 text-sm text-[color:var(--text-muted)] hover:text-[color:var(--accent)] transition-colors group">
-                <div className="w-9 h-9 glass rounded-lg flex items-center justify-center group-hover:border-[color:var(--accent)] transition-colors">
-                  <Mail size={15} className="accent" />
-                </div>
-                {profile.email}
-              </a>
-            )}
-
-            <div className="flex gap-3 pt-2">
-              {profile?.github_url && (
-                <a href={profile.github_url} target="_blank" rel="noopener noreferrer"
-                   className="glass p-2.5 rounded-lg text-[color:var(--text-muted)] hover:text-[color:var(--accent)] hover:border-[color:var(--accent)] transition-all">
-                  <Github size={18} />
-                </a>
-              )}
-              {profile?.linkedin_url && (
-                <a href={profile.linkedin_url} target="_blank" rel="noopener noreferrer"
-                   className="glass p-2.5 rounded-lg text-[color:var(--text-muted)] hover:text-[color:var(--accent)] hover:border-[color:var(--accent)] transition-all">
-                  <Linkedin size={18} />
-                </a>
-              )}
-              {profile?.twitter_url && (
-                <a href={profile.twitter_url} target="_blank" rel="noopener noreferrer"
-                   className="glass p-2.5 rounded-lg text-[color:var(--text-muted)] hover:text-[color:var(--accent)] hover:border-[color:var(--accent)] transition-all">
-                  <Twitter size={18} />
-                </a>
-              )}
+        <div className="reveal-right lg:col-span-7">
+          {sent ? (
+            <div className="marks border border-line p-10 sm:p-14 text-center" style={{ background: 'var(--bg)' }}>
+              <span className="mx-auto w-14 h-14 border border-[color:var(--accent)] text-[color:var(--accent)] flex items-center justify-center"><Check size={26} /></span>
+              <h3 className="font-display font-semibold text-ink text-2xl mt-6">Message received.</h3>
+              <p className="text-muted mt-2">Thanks for reaching out — I&apos;ll reply as soon as I can.</p>
+              <button onClick={() => { setSent(false); setForm({ name: '', email: '', message: '' }) }} className="btn btn-outline mt-8">Send another</button>
             </div>
-          </div>
-
-          {/* Form */}
-          <div className="md:col-span-3 reveal-right">
-            {sent ? (
-              <div className="glass rounded-xl p-10 text-center space-y-3">
-                <CheckCircle size={40} className="accent mx-auto" />
-                <h3 className="font-semibold text-[color:var(--text)]">Message sent!</h3>
-                <p className="text-sm text-[color:var(--text-muted)]">I'll get back to you within 24 hours.</p>
-                <button onClick={() => { setSent(false); setForm({ name: '', email: '', message: '' }) }}
-                        className="btn-outline text-xs mt-2">
-                  Send another
-                </button>
+          ) : (
+            <form onSubmit={submit} noValidate className="border border-line rounded p-5 sm:p-6 space-y-5" style={{ background: 'var(--bg)' }}>
+              <div className="grid sm:grid-cols-2 gap-5">
+                <div><label htmlFor="c-name" className="label block mb-2">Name</label><input id="c-name" name="name" value={form.name} onChange={change} className="field" placeholder="Your name" autoComplete="name" required /></div>
+                <div><label htmlFor="c-email" className="label block mb-2">Email</label><input id="c-email" name="email" type="email" value={form.email} onChange={change} className="field" placeholder="you@example.com" autoComplete="email" required /></div>
               </div>
-            ) : (
-              <form onSubmit={handleSubmit} className="glass rounded-xl p-6 space-y-4">
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="admin-label">Name</label>
-                    <input name="name" value={form.name} onChange={handleChange}
-                           className="admin-input" placeholder="Your name" />
-                  </div>
-                  <div>
-                    <label className="admin-label">Email</label>
-                    <input name="email" type="email" value={form.email} onChange={handleChange}
-                           className="admin-input" placeholder="your@email.com" />
-                  </div>
-                </div>
-                <div>
-                  <label className="admin-label">Message</label>
-                  <textarea name="message" value={form.message} onChange={handleChange}
-                            rows={5} className="admin-input resize-none"
-                            placeholder="Tell me about your project..." />
-                </div>
-                <button type="submit" disabled={sending} className="btn-primary w-full gap-2 py-3">
-                  <Send size={15} />
-                  {sending ? 'Sending...' : 'Send Message'}
-                </button>
-              </form>
-            )}
-          </div>
+              <div><label htmlFor="c-msg" className="label block mb-2">Message</label><textarea id="c-msg" name="message" value={form.message} onChange={change} className="field" placeholder="Tell me about your project or idea…" required /></div>
+              <input type="text" tabIndex={-1} autoComplete="off" value={trap} onChange={e => setTrap(e.target.value)} className="hidden" aria-hidden />
+              <button type="submit" disabled={sending} className="btn btn-solid w-full sm:w-auto"><Send size={15} />{sending ? 'Sending…' : 'Send message'}</button>
+            </form>
+          )}
         </div>
       </div>
-    </section>
+    </SectionShell>
   )
 }

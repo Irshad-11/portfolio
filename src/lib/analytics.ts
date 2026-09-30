@@ -1,5 +1,8 @@
 import { supabase } from './supabase'
 
+/** Never record visits coming from the admin panel or its live-preview frame. */
+const skip = () => typeof location !== 'undefined' && (location.pathname.startsWith('/admin') || location.pathname.startsWith('/__preview'))
+
 // Get or create a persistent visitor ID stored in localStorage
 export function getVisitorId(): string {
   const key = 'portfolio_visitor_id'
@@ -13,6 +16,7 @@ export function getVisitorId(): string {
 
 // Track a page visit
 export async function trackPageVisit(): Promise<void> {
+  if (skip()) return
   try {
     const visitorId = getVisitorId()
     await supabase.from('page_visits').insert([{
@@ -27,6 +31,7 @@ export async function trackPageVisit(): Promise<void> {
 
 // Track a section becoming visible
 export async function trackSectionVisit(sectionName: string): Promise<void> {
+  if (skip()) return
   try {
     const visitorId = getVisitorId()
     await supabase.from('section_visits').insert([{
@@ -44,7 +49,7 @@ export async function trackMessageDraft(opts: {
   emailProvided: boolean
   messageLength: number
 }): Promise<void> {
-  if (opts.messageLength < 10) return // Ignore very short drafts
+  if (skip() || opts.messageLength < 10) return // Ignore very short drafts
   try {
     const visitorId = getVisitorId()
     await supabase.from('message_drafts').insert([{

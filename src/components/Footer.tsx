@@ -1,41 +1,64 @@
-import { Github, Linkedin, Twitter, Heart } from 'lucide-react'
 import { useData } from '../context/DataContext'
+import { ActionLink, pad } from './ui'
+import Ribbon from './Ribbon'
+import { DynamicIcon } from '../lib/icons'
+import { ArrowUp, Lock } from 'lucide-react'
+import { Link } from 'react-router-dom'
 
 export default function Footer() {
-  const { profile } = useData()
+  const { profile, config, sections } = useData()
+  const links = config.links.filter(l => l.footer)
+  const rb = config.ribbon
+  const showRibbon = rb.enabled && (rb.position === 'before_footer' || rb.position === 'both')
+  const name = profile?.name || 'Irshad Hossain'
 
   return (
-    <footer className="border-t border-[color:var(--border)] py-10 px-4">
-      <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="text-center sm:text-left">
-          <p className="font-bold text-[color:var(--text)]">{profile?.name ?? 'Irshad'}<span className="accent">.</span></p>
-          <p className="text-xs text-[color:var(--text-faint)] mt-1">{profile?.title}</p>
+    <footer className="relative z-10 mt-8">
+      {showRibbon && <Ribbon cfg={rb} />}
+      <div className="border-t border-line" style={{ background: 'var(--bg)' }}>
+        <div className="container-x py-14 md:py-20">
+          <div className="grid md:grid-cols-12 gap-10">
+            <div className="md:col-span-6">
+              <p className="label mb-4">Colophon</p>
+              <p className="font-display font-semibold text-lg sm:text-2xl leading-snug text-ink max-w-md">
+                {config.site.footer_text || `${name}. ${profile?.title || ''}`}
+              </p>
+            </div>
+            <nav className="md:col-span-3" aria-label="Footer sections">
+              <p className="label mb-4">Index</p>
+              <ul className="space-y-2">
+                {sections.map(s => (
+                  <li key={s.key}>
+                    <ActionLink href={`#${s.key}`} className="mono text-muted hover:text-[color:var(--accent)] transition-colors">
+                      <span className="text-faint mr-2">{pad(s.index)}</span>{s.title}
+                    </ActionLink>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+            <div className="md:col-span-3">
+              <p className="label mb-4">Elsewhere</p>
+              <ul className="space-y-2">
+                {links.map(l => (
+                  <li key={l.id}>
+                    <ActionLink href={l.url} className="inline-flex items-center gap-2.5 text-muted hover:text-[color:var(--accent)] transition-colors">
+                      <DynamicIcon name={l.icon} size={15} />{l.label}
+                    </ActionLink>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
         </div>
-
-        <div className="flex items-center gap-4">
-          {profile?.github_url && (
-            <a href={profile.github_url} target="_blank" rel="noopener noreferrer"
-              className="text-[color:var(--text-faint)] hover:text-[color:var(--accent)] transition-colors">
-              <Github size={18} />
-            </a>
-          )}
-          {profile?.linkedin_url && (
-            <a href={profile.linkedin_url} target="_blank" rel="noopener noreferrer"
-              className="text-[color:var(--text-faint)] hover:text-[color:var(--accent)] transition-colors">
-              <Linkedin size={18} />
-            </a>
-          )}
-          {profile?.twitter_url && (
-            <a href={profile.twitter_url} target="_blank" rel="noopener noreferrer"
-              className="text-[color:var(--text-faint)] hover:text-[color:var(--accent)] transition-colors">
-              <Twitter size={18} />
-            </a>
-          )}
+        <div className="border-t border-line">
+          <div className="container-x h-14 flex items-center justify-between gap-4">
+            <p className="mono text-faint">© {new Date().getFullYear()} {name}</p>
+            <Link to="/admin/login" className="mono flex items-center gap-1.5 text-faint hover:text-[color:var(--accent)] transition-colors ml-auto mr-5"><Lock size={12} />Admin login</Link>
+            <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="mono flex items-center gap-2 text-muted hover:text-[color:var(--accent)] transition-colors">
+              Top <ArrowUp size={13} />
+            </button>
+          </div>
         </div>
-
-        <p className="text-xs text-[color:var(--text-faint)] flex items-center gap-1">
-          Built with <Heart size={11} className="accent" fill="currentColor" /> & React
-        </p>
       </div>
     </footer>
   )

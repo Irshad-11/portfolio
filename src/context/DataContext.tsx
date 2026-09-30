@@ -1,109 +1,81 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
+import { createContext, useContext, useEffect, useMemo, useState, ReactNode, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
-import type { Profile, Skill, Certification, Achievement, Project, Experience, BlogPost, Testimonial } from '../lib/types'
+import type { PortfolioData, RawPortfolio } from '../lib/types'
+import { buildData, EMPTY_RAW } from '../lib/defaults'
 
-interface DataContextValue {
-  profile: Profile | null
-  skills: Skill[]
-  certifications: Certification[]
-  achievements: Achievement[]
-  projects: Project[]
-  experience: Experience[]
-  blogPosts: BlogPost[]
-  testimonials: Testimonial[]
+export interface DataContextValue extends PortfolioData {
   unreadMessages: number
   loading: boolean
   refetch: () => void
 }
 
-const DataContext = createContext<DataContextValue>({
-  profile: null,
-  skills: [],
-  certifications: [],
-  achievements: [],
-  projects: [],
-  experience: [],
-  blogPosts: [],
-  testimonials: [],
-  unreadMessages: 0,
-  loading: true,
-  refetch: () => {},
+const CACHE_KEY = 'portfolio_cache_v3'
+
+const empty = buildData(EMPTY_RAW)
+
+export const DataContext = createContext<DataContextValue>({
+  ...empty, unreadMessages: 0, loading: true, refetch: () => {},
 })
 
+function readCache(): RawPortfolio | null {
+  try {
+    const s = localStorage.getItem(CACHE_KEY)
+    return s ? (JSON.parse(s) as RawPortfolio) : null
+  } catch { return null }
+}
+
 export function DataProvider({ children }: { children: ReactNode }) {
-  const [profile, setProfile] = useState<Profile | null>(null)
-  const [skills, setSkills] = useState<Skill[]>([])
-  const [certifications, setCertifications] = useState<Certification[]>([])
-  const [achievements, setAchievements] = useState<Achievement[]>([])
-  const [projects, setProjects] = useState<Project[]>([])
-  const [experience, setExperience] = useState<Experience[]>([])
-  const [blogPosts, setBlogPosts] = useState<BlogPost[]>([])
-  const [testimonials, setTestimonials] = useState<Testimonial[]>([])
-  const [unreadMessages, setUnreadMessages] = useState(0)
-  const [loading, setLoading] = useState(true)
+  const cached = useMemo(readCache, [])
+  const [raw, setRaw] = useState<RawPortfolio>(cached ?? EMPTY_RAW)
+  const [unreadMessages, setUnread] = useState(0)
+  const [loading, setLoading] = useState(!cached)
 
-  const fetchData = async () => {
-    setLoading(true)
-    // Fetch all public portfolio data first
-    const [
-      profileRes, skillsRes, certsRes, achievementsRes,
-      projectsRes, expRes, blogRes, testimonialsRes
-    ] = await Promise.all([
-      supabase.from('profile').select('*').single(),
-      supabase.from('skills').select('*').order('sort_order'),
-      supabase.from('certifications').select('*').order('sort_order'),
-      supabase.from('achievements').select('*').order('sort_order'),
-      supabase.from('projects').select('*').order('sort_order'),
-      supabase.from('experience').select('*').order('sort_order'),
-      supabase.from('blog_posts').select('*').order('sort_order'),
-      supabase.from('testimonials').select('*').order('sort_order'),
+  const fetchData = useCallback(async () => {
+    const q = (t: string, order = 'sort_order') => supabase.from(t).select('*').order(order)
+    const [profile, skills, expertise, certs, ach, projects, exp, blog, tests] = await Promise.all([
+      supabase.from('profile').select('*').limit(1).maybeSingle(),
+      q('skills'), q('expertise'), q('certifications'), q('achievements'),
+      q('projects'), q('experience'), q('blog_posts', 'created_at'), q('testimonials'),
     ])
+    const next: RawPortfolio = {
+      profile: profile.data ?? null,
+      skills: skills.data ?? [],
+      expertise: expertise.data ?? [],
+      certifications: certs.data ?? [],
+      achievements: ach.data ?? [],
+      projects: projects.data ?? [],
+      experience: exp.data ?? [],
+      blogPosts: blog.data ?? [],
+      testimonials: tests.data ?? [],
+    }
+    setRaw(next)
+    setLoading(false)
+    try { localStorage.setItem(CACHE_KEY, JSON.stringify(next)) } catch { /* quota */ }
 
-    if (profileRes.data) setProfile(profileRes.data)
-    if (skillsRes.data) setSkills(skillsRes.data)
-    if (certsRes.data) setCertifications(certsRes.data)
-    if (achievementsRes.data) setAchievements(achievementsRes.data)
-    if (projectsRes.data) setProjects(projectsRes.data)
-    if (expRes.data) setExperience(expRes.data)
-    if (blogRes.data) setBlogPosts(blogRes.data)
-    if (testimonialsRes.data) setTestimonials(testimonialsRes.data)
-    setLoading(false) // ✅ Unblock UI before attempting admin-only message count
-
-    // Message count only works for authenticated admins — fetch separately so
-    // a 403 here never blocks the public portfolio from loading
+    // Admin-only: unread messages (never blocks the public site)
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) return
-      supabase
-        .from('contact_messages')
-        .select('id', { count: 'exact' })
-        .eq('read', false)
-        .then(({ count }) => setUnreadMessages(count ?? 0))
+      supabase.from('contact_messages').select('id', { count: 'exact', head: true }).eq('read', false)
+        .then(({ count }) => setUnread(count ?? 0))
     })
-  }
+  }, [])
 
   useEffect(() => {
     fetchData()
-
-    // Real-time subscription for new messages
     const channel = supabase
       .channel('contact-messages')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'contact_messages' }, () => {
-        setUnreadMessages(prev => prev + 1)
-      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'contact_messages' }, () => setUnread(p => p + 1))
       .subscribe()
-
     return () => { supabase.removeChannel(channel) }
-  }, [])
+  }, [fetchData])
 
-  return (
-    <DataContext.Provider value={{
-      profile, skills, certifications, achievements, projects,
-      experience, blogPosts, testimonials, unreadMessages, loading,
-      refetch: fetchData,
-    }}>
-      {children}
-    </DataContext.Provider>
+  const value = useMemo<DataContextValue>(
+    () => ({ ...buildData(raw), unreadMessages, loading, refetch: fetchData }),
+    [raw, unreadMessages, loading, fetchData],
   )
+
+  return <DataContext.Provider value={value}>{children}</DataContext.Provider>
 }
 
 export const useData = () => useContext(DataContext)
+export const useConfig = () => useContext(DataContext).config

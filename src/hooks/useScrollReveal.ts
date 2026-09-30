@@ -27,14 +27,14 @@ export function useScrollReveal(sectionName?: string) {
           if (entry.isIntersecting) runReveal()
         })
       },
-      { threshold: 0 } // ✅ Fix: fire as soon as ANY pixel is visible
+      { threshold: 0, rootMargin: '0px 0px -18% 0px' } // fire once the section top is comfortably inside the viewport
     )
 
     io.observe(el)
 
     // ✅ Fix: if already in viewport when component mounts, reveal immediately
     const rect = el.getBoundingClientRect()
-    if (rect.top < window.innerHeight && rect.bottom > 0) {
+    if (rect.top < window.innerHeight * 0.82 && rect.bottom > 0) {
       setTimeout(runReveal, 100)
     }
 

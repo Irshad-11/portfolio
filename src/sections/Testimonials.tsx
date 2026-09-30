@@ -1,144 +1,67 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
-import { ExternalLink } from 'lucide-react'
+import { useState } from 'react'
+import { ArrowUpRight, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useData } from '../context/DataContext'
-import { useScrollReveal } from '../hooks/useScrollReveal'
-import SectionHeading from '../components/SectionHeading'
-
-/* Slight rotation per card — matches demo portfolio exactly */
-const ROTATIONS = [-1.5, 1, -0.5, 1.5, -1, 0.8]
-const AUTO_MS   = 3500
+import { SectionShell, pad } from '../components/ui'
+import RichContent from '../components/RichContent'
 
 export default function Testimonials() {
-  const { testimonials, loading } = useData()
-  const ref                       = useScrollReveal('testimonials')
-  const [active, setActive]       = useState(0)
-  const [resetKey, setResetKey]   = useState(0) // increment to restart timer
-
-  if (!loading && testimonials.length === 0) return null
-
-  /* Auto-advance — resets whenever resetKey or data length changes */
-  useEffect(() => {
-    if (testimonials.length <= 1) return
-    const id = setInterval(() => {
-      setActive(prev => (prev + 1) % testimonials.length)
-    }, AUTO_MS)
-    return () => clearInterval(id)
-  }, [testimonials.length, resetKey])
-
-  /* Manual select — resets auto timer */
-  const select = (idx: number) => {
-    setActive(idx)
-    setResetKey(k => k + 1)
-  }
+  const { testimonials, sections } = useData()
+  const sec = sections.find(s => s.key === 'testimonials')
+  const [i, setI] = useState(0)
+  if (!sec) return null
+  const n = testimonials.length
+  const cur = testimonials[Math.min(i, n - 1)]
+  const initials = (s: string) => s.split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase()
 
   return (
-    <section
-      id="testimonials"
-      ref={ref as React.RefObject<HTMLElement>}
-      className="section-base"
-    >
-      <div className="max-w-6xl mx-auto">
-        <div className="reveal">
-          <SectionHeading
-            title="Testimonials"
-            subtitle="What people say about working with me"
-          />
-        </div>
-
-        {/* Card grid — 1:1 from demo portfolio */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {testimonials.map((t, i) => (
-            <div
-              key={t.id}
-              onClick={() => select(i)}
-              className={`reveal rounded-[24px] p-6 cursor-pointer overflow-hidden
-                transition-all duration-500
-                ${i === 0 ? 'lg:col-span-2' : ''}
-              `}
-              style={{
-                background: 'rgba(255,255,255,0.05)',
-                border: `2px solid ${active === i ? 'var(--accent)' : 'transparent'}`,
-                boxShadow: active === i ? '0 0 32px var(--accent-glow)' : 'none',
-                transform: `rotate(${ROTATIONS[i % ROTATIONS.length]}deg)`,
-                transitionDelay: `${i * 55}ms`,
-                backdropFilter: 'blur(20px)',
-                WebkitBackdropFilter: 'blur(20px)',
-              }}
-            >
-              {/* Large accent opening quote — exactly like demo */}
-              <span
-                className="text-5xl font-extrabold leading-none block -mb-4 select-none"
-                style={{ color: 'var(--accent)', opacity: 0.3 }}
-              >
-                &ldquo;
-              </span>
-
-              <p className="text-[color:var(--text-muted)] text-sm leading-relaxed">
-                {t.content}
-              </p>
-
-              {/* Avatar + name row */}
-              <div className="mt-5 flex items-center gap-3">
-                {t.avatar_url ? (
-                  <img
-                    src={t.avatar_url}
-                    alt={t.name}
-                    className="w-10 h-10 rounded-full object-cover flex-shrink-0"
-                  />
-                ) : (
-                  <div
-                    className="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center text-sm font-extrabold text-white accent-bg"
-                  >
-                    {t.name.charAt(0)}
-                  </div>
-                )}
-                <div>
-                  <p className="text-sm font-bold text-[color:var(--text)]">{t.name}</p>
-                  <p className="text-xs text-[color:var(--text-faint)]">
-                    {t.role && <>{t.role}</>}
-                    {t.company && (
-                      <>
-                        {' '}at{' '}
-                        {t.company_url ? (
-                          <a
-                            href={t.company_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={e => e.stopPropagation()}
-                            className="inline-flex items-center gap-0.5 accent hover:opacity-80 transition-opacity"
-                          >
-                            {t.company}
-                            <ExternalLink size={10} />
-                          </a>
-                        ) : (
-                          <span className="accent">{t.company}</span>
-                        )}
-                      </>
-                    )}
-                  </p>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Progress dots (auto-advance indicator) */}
-        {testimonials.length > 1 && (
-          <div className="flex justify-center gap-2 mt-10">
-            {testimonials.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => select(i)}
-                className={`h-1.5 rounded-full transition-all duration-400 ${
-                  i === active
-                    ? 'w-6 accent-bg'
-                    : 'w-1.5 bg-[color:var(--border-hover)]'
-                }`}
-              />
-            ))}
+    <SectionShell id="testimonials" index={sec.index} title={sec.title} subtitle={sec.subtitle} aside={`${n} note${n === 1 ? '' : 's'}`}>
+      <div className="reveal grid lg:grid-cols-12 gap-8 lg:gap-14">
+        {n > 1 && (
+          <div className="lg:col-span-4 order-2 lg:order-1">
+            <ul className="flex lg:flex-col gap-2 lg:gap-0 overflow-x-auto no-scrollbar lg:overflow-visible -mx-5 px-5 lg:mx-0 lg:px-0 lg:ledger" role="tablist" aria-label="Testimonials">
+              {testimonials.map((t, k) => (
+                <li key={t.id} className="shrink-0">
+                  <button role="tab" aria-selected={k === i} onClick={() => setI(k)}
+                    className={`w-full text-left flex items-center gap-3 lg:py-4 px-4 lg:px-3 py-3 border lg:border-0 transition-colors ${k === i ? 'border-[color:var(--accent)] lg:bg-[color:var(--accent-subtle)]' : 'border-line hover:bg-[color:var(--bg-card-hover)]'}`}>
+                    <span className={`mono tabular ${k === i ? 'text-[color:var(--accent)]' : 'text-faint'}`}>{pad(k + 1)}</span>
+                    <span className="min-w-0">
+                      <span className="block font-display font-semibold text-ink whitespace-nowrap lg:whitespace-normal">{t.name}</span>
+                      <span className="block mono !text-[0.75rem] text-faint whitespace-nowrap lg:whitespace-normal">{[t.role, t.company].filter(Boolean).join(' · ')}</span>
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
+
+        <figure key={cur.id} className={`fade-up ${n > 1 ? 'lg:col-span-8' : 'lg:col-span-10'} order-1 lg:order-2 relative`} style={{ '--d': '0ms' } as React.CSSProperties}>
+          <span aria-hidden className="absolute -top-6 -left-1 font-display font-semibold text-[4rem] sm:text-[5rem] leading-none text-[color:var(--accent)] opacity-25 select-none">“</span>
+          <blockquote className="relative pt-10 sm:pt-14">
+            <RichContent html={cur.content} className="prose-quote !text-ink" />
+          </blockquote>
+          <figcaption className="mt-8 pt-6 border-t border-dashed border-[color:var(--border-hover)] flex items-center gap-4">
+            {cur.avatar_url
+              ? <img src={cur.avatar_url} alt="" className="w-14 h-14 object-cover border border-line" />
+              : <span className="w-14 h-14 border border-line flex items-center justify-center font-display font-semibold text-ink placeholder-x">{initials(cur.name)}</span>}
+            <div className="min-w-0">
+              <p className="font-display font-semibold text-ink text-lg">{cur.name}</p>
+              <p className="text-sm text-muted">
+                {cur.role}{cur.role && cur.company && ', '}
+                {cur.company_url
+                  ? <a href={cur.company_url} target="_blank" rel="noopener noreferrer" className="link-arrow u-link">{cur.company}<ArrowUpRight size={13} /></a>
+                  : cur.company}
+              </p>
+            </div>
+            {n > 1 && (
+              <div className="ml-auto hidden sm:flex gap-2">
+                <button className="icon-btn" onClick={() => setI((i - 1 + n) % n)} aria-label="Previous"><ChevronLeft size={16} /></button>
+                <button className="icon-btn" onClick={() => setI((i + 1) % n)} aria-label="Next"><ChevronRight size={16} /></button>
+              </div>
+            )}
+          </figcaption>
+        </figure>
       </div>
-    </section>
+    </SectionShell>
   )
 }
